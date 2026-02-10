@@ -2,25 +2,16 @@ import Dustbin from "../models/Dustbin.js";
 import Complaint from "../models/Complaint.js";
 import cloudinary from "../config/cloudinary.js";
 
-/**
- * POST /complaints
- * Fields:
- * - binCode (string)
- * - description (string)
- * - images (file[])
- */
 export const createComplaint = async (req, res) => {
   try {
     const { binCode, description } = req.body;
 
-    // 1. Validate required fields
     if (!binCode || !description) {
       return res
         .status(400)
         .json({ message: "binCode and description required" });
     }
 
-    // 2. Validate dustbin
     const dustbin = await Dustbin.findOne({ binCode });
     if (!dustbin) {
       return res.status(400).json({ message: "Invalid bin code" });
