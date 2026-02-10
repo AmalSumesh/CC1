@@ -94,7 +94,7 @@ export default function TestComplaints() {
                 type="file"
                 multiple
                 onChange={(e) => setImages(e.target.files)}
-                className="w-full"
+                className="border border-gray-300 rounded-md p-2 w-full"
               />
             </div>
 
