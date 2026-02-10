@@ -1,7 +1,7 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Login from './pages/Login'
-import AdminDashboard from './pages/AdminDashboard'
-import DriverDashboard from './pages/DriverDashboard'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
+import DriverDashboard from "./pages/DriverDashboard";
 
 export default function App() {
   return (
@@ -12,5 +12,5 @@ export default function App() {
         <Route path="/driver" element={<DriverDashboard />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

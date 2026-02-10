@@ -9,20 +9,26 @@
     "dev": "nodemon server.js",
     "seed": "node scripts/seed.js"
   },
-  "keywords": ["garbage", "routing", "optimization", "ai"],
+  "keywords": [
+    "garbage",
+    "routing",
+    "optimization",
+    "ai"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.6"
+    "mongoose": "^9.1.6",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
   }
 }
-
