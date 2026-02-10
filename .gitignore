@@ -1,0 +1,19 @@
+# Node / React
+node_modules/
+dist/
+build/
+
+# Env files
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# YOLO training outputs
+runs/
+
+# Logs
+*.log

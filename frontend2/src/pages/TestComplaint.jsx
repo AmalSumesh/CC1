@@ -25,13 +25,19 @@ export default function TestComplaints() {
 
       const data = await res.json();
       console.log("POST response:", data);
-      alert("Complaint submitted");
+
+      if (!res.ok) {
+        alert(data.message || "Failed to submit complaint");
+        return;
+      }
+
+      alert("Complaint submitted successfully!");
       setBinCode("");
       setDescription("");
       setImages([]);
     } catch (err) {
       console.error(err);
-      alert("Failed to submit complaint");
+      alert("Error: " + err.message);
     } finally {
       setLoading(false);
     }

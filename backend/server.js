@@ -15,8 +15,8 @@ connectToDatabase();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
     allowedHeaders: [
       "Content-Type",
@@ -25,7 +25,7 @@ app.use(
       "Expires",
       "Pragma",
     ],
-  }),
+  })
 );
 
 app.use(cookieParser());

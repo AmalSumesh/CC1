@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 export default function AdminDashboard() {
   const [drivers, setDrivers] = useState([])
   const [dustbins, setDustbins] = useState([])
+  const [complaints, setComplaints] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
@@ -19,12 +20,14 @@ export default function AdminDashboard() {
   const fetchAll = async () => {
     try {
       setLoading(true)
-      const [dRes, bRes] = await Promise.all([
+      const [dRes, bRes, cRes] = await Promise.all([
         api.get('/admin/drivers'),
-        api.get('/admin/dustbins')
+        api.get('/admin/dustbins'),
+        api.get('/complaints')
       ])
       setDrivers(dRes.data)
       setDustbins(bRes.data)
+      setComplaints(cRes.data.complaints)
     } catch (err) {
       console.error(err)
       setError(err.response?.data?.message || err.message)
@@ -52,8 +55,8 @@ export default function AdminDashboard() {
 
   const removeDriver = async (id) => {
     if (!confirm('Delete driver?')) return
-    try { setLoading(true); await api.delete(`/admin/driver/${id}`); fetchAll() } 
-    catch (err) { setError(err.response?.data?.message || err.message) } 
+    try { setLoading(true); await api.delete(`/admin/driver/${id}`); fetchAll() }
+    catch (err) { setError(err.response?.data?.message || err.message) }
     finally { setLoading(false) }
   }
 
@@ -87,6 +90,18 @@ export default function AdminDashboard() {
     finally { setLoading(false) }
   }
 
+  const resolveComplaint = async (id) => {
+    try {
+      setLoading(true)
+      await api.patch(`/complaints/${id}`, { status: 'resolved' })
+      fetchAll()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       <header className="bg-white shadow-md">
@@ -101,19 +116,20 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex gap-4 mb-8">
-          <button onClick={() => setActiveTab('drivers')} className={`px-6 py-3 rounded-lg ${activeTab==='drivers'?'bg-blue-600 text-white':'bg-white'}`}>Drivers</button>
-          <button onClick={() => setActiveTab('dustbins')} className={`px-6 py-3 rounded-lg ${activeTab==='dustbins'?'bg-blue-600 text-white':'bg-white'}`}>Dustbins</button>
+          <button onClick={() => setActiveTab('drivers')} className={`px-6 py-3 rounded-lg ${activeTab === 'drivers' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Drivers</button>
+          <button onClick={() => setActiveTab('dustbins')} className={`px-6 py-3 rounded-lg ${activeTab === 'dustbins' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Dustbins</button>
+          <button onClick={() => setActiveTab('complaints')} className={`px-6 py-3 rounded-lg ${activeTab === 'complaints' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Complaints</button>
         </div>
 
         {error && <div className="mb-4 text-red-600">{error}</div>}
 
-        {activeTab==='drivers' && (
+        {activeTab === 'drivers' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="font-bold mb-4">Create Driver</h3>
-              <input placeholder="Name" value={newDriver.name} onChange={e=>setNewDriver(s=>({...s,name:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
-              <input placeholder="Username" value={newDriver.username} onChange={e=>setNewDriver(s=>({...s,username:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
-              <input placeholder="Password" value={newDriver.password} onChange={e=>setNewDriver(s=>({...s,password:e.target.value}))} className="w-full mb-4 p-2 border rounded" />
+              <input placeholder="Name" value={newDriver.name} onChange={e => setNewDriver(s => ({ ...s, name: e.target.value }))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Username" value={newDriver.username} onChange={e => setNewDriver(s => ({ ...s, username: e.target.value }))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Password" value={newDriver.password} onChange={e => setNewDriver(s => ({ ...s, password: e.target.value }))} className="w-full mb-4 p-2 border rounded" />
               <button onClick={createDriver} className="bg-green-600 text-white px-4 py-2 rounded">Add Driver</button>
             </div>
 
@@ -124,20 +140,20 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-semibold">{d.name} <span className="text-sm text-gray-500">@{d.username}</span></p>
                       <div className="mt-2 flex gap-2 flex-wrap">
-                        {d.assignedBins && d.assignedBins.length>0 ? d.assignedBins.map(b => (
+                        {d.assignedBins && d.assignedBins.length > 0 ? d.assignedBins.map(b => (
                           <div key={b._id} className="px-3 py-1 bg-gray-100 rounded flex items-center gap-2">
                             <span className="font-medium">{b.binCode}</span>
-                            <button onClick={()=>removeBin(d._id,b._id)} className="text-red-500">×</button>
+                            <button onClick={() => removeBin(d._id, b._id)} className="text-red-500">×</button>
                           </div>
                         )) : <span className="text-gray-500">No bins assigned</span>}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <select onChange={e=>assignBin(d._id,e.target.value)} className="p-2 border rounded">
+                      <select onChange={e => assignBin(d._id, e.target.value)} className="p-2 border rounded">
                         <option value="">Assign bin</option>
-                        {dustbins.map(b=> <option key={b._id} value={b._id}>{b.binCode}</option>)}
+                        {dustbins.map(b => <option key={b._id} value={b._id}>{b.binCode}</option>)}
                       </select>
-                      <button onClick={()=>removeDriver(d._id)} className="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+                      <button onClick={() => removeDriver(d._id)} className="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
                     </div>
                   </div>
                 ))
@@ -146,29 +162,68 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab==='dustbins' && (
+        {activeTab === 'dustbins' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded shadow">
               <h3 className="font-bold mb-4">Add Dustbin</h3>
-              <input placeholder="Bin Code" value={newBin.binCode} onChange={e=>setNewBin(s=>({...s,binCode:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
-              <input placeholder="Lat" value={newBin.lat} onChange={e=>setNewBin(s=>({...s,lat:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
-              <input placeholder="Lng" value={newBin.lng} onChange={e=>setNewBin(s=>({...s,lng:e.target.value}))} className="w-full mb-4 p-2 border rounded" />
+              <input placeholder="Bin Code" value={newBin.binCode} onChange={e => setNewBin(s => ({ ...s, binCode: e.target.value }))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Lat" value={newBin.lat} onChange={e => setNewBin(s => ({ ...s, lat: e.target.value }))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Lng" value={newBin.lng} onChange={e => setNewBin(s => ({ ...s, lng: e.target.value }))} className="w-full mb-4 p-2 border rounded" />
               <button onClick={createBin} className="bg-green-600 text-white px-4 py-2 rounded">Add Dustbin</button>
             </div>
 
             <div className="md:col-span-2 space-y-4">
-              {dustbins.map(b=> (
+              {dustbins.map(b => (
                 <div key={b._id} className="bg-white p-4 rounded shadow flex justify-between items-center">
                   <div>
                     <p className="font-semibold">{b.binCode}</p>
                     <p className="text-sm text-gray-600">{b.location?.lat?.toFixed(4)}, {b.location?.lng?.toFixed(4)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={()=>deleteBin(b._id)} className="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+                    <button onClick={() => deleteBin(b._id)} className="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'complaints' && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold mb-4">User Complaints</h2>
+            {complaints.length === 0 ? <p className="text-gray-500">No complaints found.</p> : (
+              complaints.map(c => (
+                <div key={c._id} className="bg-white p-6 rounded-lg shadow-md flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-3 py-1 rounded text-sm font-semibold ${c.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {c.status.toUpperCase()}
+                      </span>
+                      <span className="font-bold text-gray-700">Bin: {c.binCode}</span>
+                      <span className="text-xs text-gray-500">{new Date(c.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-gray-800 mb-3">{c.description}</p>
+
+                    {c.images && c.images.length > 0 && (
+                      <div className="flex gap-2 flex-wrap">
+                        {c.images.map((img, idx) => (
+                          <img key={idx} src={img} alt="Evidence" className="h-24 w-24 object-cover rounded border" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {c.status !== 'resolved' && (
+                    <button
+                      onClick={() => resolveComplaint(c._id)}
+                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+                    >
+                      Mark Resolved
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
       </main>
