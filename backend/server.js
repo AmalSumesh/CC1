@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import driverRoutes from './routes/driverRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 connectToDatabase();
@@ -30,6 +31,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/driver', driverRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

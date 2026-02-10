@@ -5,24 +5,29 @@ import { useNavigate } from 'react-router-dom'
 export default function AdminDashboard() {
   const [drivers, setDrivers] = useState([])
   const [dustbins, setDustbins] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
+  const [newDriver, setNewDriver] = useState({ name: '', username: '', password: '' })
+  const [newBin, setNewBin] = useState({ binCode: '', lat: '', lng: '' })
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetchData()
+    fetchAll()
   }, [])
 
-  const fetchData = async () => {
+  const fetchAll = async () => {
     try {
       setLoading(true)
-      // Note: These endpoints might not exist yet, adjust based on your backend
-      // For now, we'll show a placeholder
-      setError(null)
+      const [dRes, bRes] = await Promise.all([
+        api.get('/admin/drivers'),
+        api.get('/admin/dustbins')
+      ])
+      setDrivers(dRes.data)
+      setDustbins(bRes.data)
     } catch (err) {
-      // setError(err.response?.data?.message || 'Failed to load data')
-      console.error('Error fetching data:', err)
+      console.error(err)
+      setError(err.response?.data?.message || err.message)
     } finally {
       setLoading(false)
     }
@@ -34,207 +39,132 @@ export default function AdminDashboard() {
     navigate('/')
   }
 
+  const createDriver = async () => {
+    try {
+      setLoading(true)
+      await api.post('/admin/driver', newDriver)
+      setNewDriver({ name: '', username: '', password: '' })
+      fetchAll()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message)
+    } finally { setLoading(false) }
+  }
+
+  const removeDriver = async (id) => {
+    if (!confirm('Delete driver?')) return
+    try { setLoading(true); await api.delete(`/admin/driver/${id}`); fetchAll() } 
+    catch (err) { setError(err.response?.data?.message || err.message) } 
+    finally { setLoading(false) }
+  }
+
+  const assignBin = async (driverId, binId) => {
+    try { setLoading(true); await api.post('/admin/assign-bin', { driverId, binId }); fetchAll() }
+    catch (err) { setError(err.response?.data?.message || err.message) }
+    finally { setLoading(false) }
+  }
+
+  const removeBin = async (driverId, binId) => {
+    try { setLoading(true); await api.post('/admin/remove-bin', { driverId, binId }); fetchAll() }
+    catch (err) { setError(err.response?.data?.message || err.message) }
+    finally { setLoading(false) }
+  }
+
+  const createBin = async () => {
+    try {
+      setLoading(true)
+      await api.post('/admin/dustbin', { binCode: newBin.binCode, lat: parseFloat(newBin.lat), lng: parseFloat(newBin.lng) })
+      setNewBin({ binCode: '', lat: '', lng: '' })
+      fetchAll()
+    } catch (err) {
+      setError(err.response?.data?.message || err.message)
+    } finally { setLoading(false) }
+  }
+
+  const deleteBin = async (id) => {
+    if (!confirm('Delete dustbin?')) return
+    try { setLoading(true); await api.delete(`/admin/dustbin/${id}`); fetchAll() }
+    catch (err) { setError(err.response?.data?.message || err.message) }
+    finally { setLoading(false) }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      {/* Header */}
       <header className="bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">👨‍💼 Admin Dashboard</h1>
-            <p className="text-gray-600 text-sm mt-1">Manage system, drivers, and garbage collection</p>
+            <p className="text-gray-600 text-sm mt-1">Manage drivers and dustbins</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-          >
-            Logout
-          </button>
+          <button onClick={handleLogout} className="bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab Navigation */}
         <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              activeTab === 'overview'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            📊 Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('drivers')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              activeTab === 'drivers'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            🚗 Drivers
-          </button>
-          <button
-            onClick={() => setActiveTab('dustbins')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              activeTab === 'dustbins'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            🗑️ Dustbins
-          </button>
+          <button onClick={() => setActiveTab('drivers')} className={`px-6 py-3 rounded-lg ${activeTab==='drivers'?'bg-blue-600 text-white':'bg-white'}`}>Drivers</button>
+          <button onClick={() => setActiveTab('dustbins')} className={`px-6 py-3 rounded-lg ${activeTab==='dustbins'?'bg-blue-600 text-white':'bg-white'}`}>Dustbins</button>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8 rounded-lg">
-            <p className="text-red-700 font-semibold">⚠️ {error}</p>
-          </div>
-        )}
+        {error && <div className="mb-4 text-red-600">{error}</div>}
 
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-semibold">Total Drivers</p>
-                    <p className="text-4xl font-bold text-blue-600 mt-2">3</p>
-                  </div>
-                  <span className="text-4xl">🚗</span>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-semibold">Total Dustbins</p>
-                    <p className="text-4xl font-bold text-green-600 mt-2">8</p>
-                  </div>
-                  <span className="text-4xl">🗑️</span>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-semibold">Avg Collection Rate</p>
-                    <p className="text-4xl font-bold text-orange-600 mt-2">72%</p>
-                  </div>
-                  <span className="text-4xl">📈</span>
-                </div>
-              </div>
-            </div>
-
-            {/* System Status */}
+        {activeTab==='drivers' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">System Status</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <span className="text-gray-700">Backend Server</span>
-                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    ✓ Online
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <span className="text-gray-700">Database Connection</span>
-                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    ✓ Connected
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <span className="text-gray-700">Map Service (OSRM)</span>
-                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    ✓ Operational
-                  </span>
-                </div>
-              </div>
+              <h3 className="font-bold mb-4">Create Driver</h3>
+              <input placeholder="Name" value={newDriver.name} onChange={e=>setNewDriver(s=>({...s,name:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Username" value={newDriver.username} onChange={e=>setNewDriver(s=>({...s,username:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Password" value={newDriver.password} onChange={e=>setNewDriver(s=>({...s,password:e.target.value}))} className="w-full mb-4 p-2 border rounded" />
+              <button onClick={createDriver} className="bg-green-600 text-white px-4 py-2 rounded">Add Driver</button>
             </div>
-          </div>
-        )}
 
-        {/* Drivers Tab */}
-        {activeTab === 'drivers' && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Driver Management</h2>
-            <p className="text-gray-600 mb-6">
-              Drivers management features will be added here. You can assign dustbins, track routes, and view collection statistics.
-            </p>
-
-            {/* Sample Driver Data */}
-            <div className="space-y-4">
-              {[
-                { name: 'Raj Kumar', username: 'driver1', bins: 3, status: 'Active' },
-                { name: 'Priya Singh', username: 'driver2', bins: 4, status: 'Active' },
-                { name: 'Ahmed Hassan', username: 'driver3', bins: 1, status: 'Active' }
-              ].map((driver, idx) => (
-                <div key={idx} className="p-4 border rounded-lg hover:bg-gray-50 transition">
-                  <div className="flex justify-between items-center">
+            <div className="md:col-span-2 space-y-4">
+              {loading ? <p>Loading...</p> : (
+                drivers.map(d => (
+                  <div key={d._id} className="bg-white p-4 rounded shadow flex justify-between items-center">
                     <div>
-                      <p className="font-semibold text-gray-800">{driver.name}</p>
-                      <p className="text-sm text-gray-600">@{driver.username} • {driver.bins} bins assigned</p>
+                      <p className="font-semibold">{d.name} <span className="text-sm text-gray-500">@{d.username}</span></p>
+                      <div className="mt-2 flex gap-2 flex-wrap">
+                        {d.assignedBins && d.assignedBins.length>0 ? d.assignedBins.map(b => (
+                          <div key={b._id} className="px-3 py-1 bg-gray-100 rounded flex items-center gap-2">
+                            <span className="font-medium">{b.binCode}</span>
+                            <button onClick={()=>removeBin(d._id,b._id)} className="text-red-500">×</button>
+                          </div>
+                        )) : <span className="text-gray-500">No bins assigned</span>}
+                      </div>
                     </div>
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      {driver.status}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <select onChange={e=>assignBin(d._id,e.target.value)} className="p-2 border rounded">
+                        <option value="">Assign bin</option>
+                        {dustbins.map(b=> <option key={b._id} value={b._id}>{b.binCode}</option>)}
+                      </select>
+                      <button onClick={()=>removeDriver(d._id)} className="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
 
-        {/* Dustbins Tab */}
-        {activeTab === 'dustbins' && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Dustbin Management</h2>
-            <p className="text-gray-600 mb-6">
-              Manage dustbin locations, fill levels, and priorities.
-            </p>
+        {activeTab==='dustbins' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded shadow">
+              <h3 className="font-bold mb-4">Add Dustbin</h3>
+              <input placeholder="Bin Code" value={newBin.binCode} onChange={e=>setNewBin(s=>({...s,binCode:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Lat" value={newBin.lat} onChange={e=>setNewBin(s=>({...s,lat:e.target.value}))} className="w-full mb-2 p-2 border rounded" />
+              <input placeholder="Lng" value={newBin.lng} onChange={e=>setNewBin(s=>({...s,lng:e.target.value}))} className="w-full mb-4 p-2 border rounded" />
+              <button onClick={createBin} className="bg-green-600 text-white px-4 py-2 rounded">Add Dustbin</button>
+            </div>
 
-            {/* Sample Dustbin Data */}
-            <div className="space-y-4">
-              {[
-                { code: 'BIN-001', fill: 85, priority: 'High', location: '12.9352, 77.6245' },
-                { code: 'BIN-002', fill: 60, priority: 'Medium', location: '12.9389, 77.6050' },
-                { code: 'BIN-003', fill: 95, priority: 'Critical', location: '12.9719, 77.5937' },
-                { code: 'BIN-004', fill: 40, priority: 'Low', location: '12.9520, 77.6009' },
-                { code: 'BIN-005', fill: 75, priority: 'High', location: '12.9716, 77.5946' }
-              ].map((bin, idx) => (
-                <div key={idx} className="p-4 border rounded-lg hover:bg-gray-50 transition">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">{bin.code}</p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        📍 {bin.location}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="mb-2">
-                        <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${
-                              bin.fill >= 80 ? 'bg-red-500' : 
-                              bin.fill >= 60 ? 'bg-yellow-500' : 
-                              'bg-green-500'
-                            }`}
-                            style={{ width: `${bin.fill}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1">{bin.fill}% Full</p>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        bin.priority === 'Critical' ? 'bg-red-100 text-red-800' :
-                        bin.priority === 'High' ? 'bg-orange-100 text-orange-800' :
-                        bin.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {bin.priority}
-                      </span>
-                    </div>
+            <div className="md:col-span-2 space-y-4">
+              {dustbins.map(b=> (
+                <div key={b._id} className="bg-white p-4 rounded shadow flex justify-between items-center">
+                  <div>
+                    <p className="font-semibold">{b.binCode}</p>
+                    <p className="text-sm text-gray-600">{b.location?.lat?.toFixed(4)}, {b.location?.lng?.toFixed(4)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>deleteBin(b._id)} className="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
                   </div>
                 </div>
               ))}
